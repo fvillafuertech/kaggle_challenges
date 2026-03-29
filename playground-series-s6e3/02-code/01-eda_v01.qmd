@@ -1,0 +1,99 @@
+---
+title: "Análisis Exploratorio"
+format: html
+---
+
+## Librerías
+
+```{r}
+library(tidyverse)
+
+theme_set(
+  theme_light() +
+    theme(legend.position = "bottom",
+          plot.title = element_text(hjust = 0.5),
+          plot.subtitle = element_text(hjust = 0.5))
+)
+```
+
+## Cargando Datos
+
+```{r}
+df_train <- read_csv("01-data/train.csv") |>
+  select(-id)
+```
+
+## Meta - Análisis
+
+```{r}
+df_status_train <- funModeling::df_status(df_train, print_results = FALSE)
+df_status_train
+```
+
+## Análisis Exploratorio
+
+### Análisis Univariado
+
+#### Variables Categóricas
+
+```{r}
+var_cat <- df_status_train |>
+  filter(type != "numeric" | variable == "SeniorCitizen") |> 
+  pull(variable)
+var_cat
+```
+
+```{r}
+pie_plot1 <- df_train |>
+  count(PaymentMethod) |>
+  mutate(prop = n / sum(n)) |>
+  ggplot(aes(x = "", y = prop, fill = PaymentMethod)) +
+  geom_col() +
+  geom_text(aes(label = scales::percent(prop, accuracy = 0.1)),
+            position = position_stack(0.5), color = "white") +
+  coord_polar(theta = "y") +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_void()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
