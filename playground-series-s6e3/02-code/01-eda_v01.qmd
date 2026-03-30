@@ -1,6 +1,6 @@
 ---
 title: "Análisis Exploratorio"
-format: html
+format: gfm
 ---
 
 ## Librerías
@@ -19,7 +19,7 @@ theme_set(
 ## Cargando Datos
 
 ```{r}
-df_train <- read_csv("01-data/train.csv") |>
+df_train <- read_csv(here::here("playground-series-s6e3/01-data", "train.csv")) |>
   select(-id)
 ```
 
@@ -54,46 +54,5 @@ pie_plot1 <- df_train |>
   coord_polar(theta = "y") +
   scale_fill_brewer(palette = "Dark2") +
   theme_void()
+pie_plot1
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
