@@ -1,0 +1,93 @@
+---
+title: "Análisis de Datos"
+format: gfm
+---
+
+## Librerías
+
+```{r}
+library(tidyverse)
+
+theme_set(theme_light() +
+            theme(legend.position = "bottom",
+                  plot.title = element_text(hjust = 0.5),
+                  plot.subtitle = element_text(hjust = 0.5),
+                  axis.ticks = element_blank()))
+```
+
+## Funciones
+
+```{r}
+histogram_matrix <- function(df, var_num){
+  lista_plots <- list()
+  for(i in 1:length(var_num)){
+    lista_plots[[i]] <- dataset_train |> 
+      ggplot(aes(!!sym(var_num[i]))) + 
+      geom_histogram(fill = "steelblue") +
+      labs(title = var_num[i]) +
+      theme(axis.title.x = element_blank())
+  }
+  
+  salida <- patchwork::wrap_plots(lista_plots)
+  
+  return(salida)
+}
+```
+
+
+## Cargando Datos
+
+```{r}
+dataset_train <- read_csv(here::here("playground-series-s6e4/01-data", "train.csv")) |>
+  select(-id)
+head(dataset_train)
+```
+
+## Meta - Análisis
+
+```{r}
+df_status_train <- funModeling::df_status(dataset_train, print_results = FALSE)
+df_status_train
+```
+
+- En el primer análisis no tenemos datos nulos ni ceros en las variables.
+- 8 variables categóricas
+- 11 variables numéricas
+- 1 target
+
+## Análisis de Datos
+
+```{r}
+var_cat <- df_status_train |>
+  filter(type == "character" & variable != "Irrigation_Need") |>
+  pull(variable)
+
+var_num <- df_status_train |>
+  filter(type != "character") |>
+  pull(variable)
+
+target <- "Irrigation_Need"
+```
+
+### Univariado
+
+#### Variable Numéricas
+
+```{r}
+histogram_matrix(dataset_train, var_num) +
+  patchwork::plot_annotation(title = "Matriz de Histogramas")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
