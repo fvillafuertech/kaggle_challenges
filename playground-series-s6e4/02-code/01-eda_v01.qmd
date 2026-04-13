@@ -34,6 +34,30 @@ histogram_matrix <- function(df, var_num){
 }
 ```
 
+```{r}
+matriz_barplot <- function(df, cat_vars){
+  lista_plots <- list()
+  
+  for(i in 1:length(cat_vars)){
+    lista_plots[[i]] <- df |>
+      count(!!sym(cat_vars[i])) |>
+      mutate(prop = n / sum(n),
+             !!sym(cat_vars[i]) := fct_reorder(!!sym(cat_vars[i]), prop)) |>
+      ggplot(aes(prop, !!sym(cat_vars[i]))) +
+      geom_col(fill = "steelblue") +
+      geom_text(aes(label = scales::percent(prop, accuracy = 0.1)), hjust = -0.1) +
+      scale_x_continuous(expand = expansion(mult = c(0, 0.4))) +
+      theme(axis.text.x = element_blank(),
+            axis.ticks.x = element_blank(),
+            axis.title.x = element_blank())
+  }
+  
+  matriz_plots <- patchwork::wrap_plots(lista_plots)
+  
+  return(matriz_plots)
+}
+```
+
 
 ## Cargando Datos
 
@@ -84,12 +108,8 @@ mlr::summarizeColumns(dataset_train[var_num])
 #### Variables Categóricas
 
 ```{r}
-dataset_train[var_cat] |>
-  count(soil_type) |>
-  mutate(prop = n / sum(n))
+matriz_barplot(dataset_train, cat_vars = var_cat)
 ```
-
-
 
 
 
