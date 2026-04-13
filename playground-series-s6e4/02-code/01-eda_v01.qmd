@@ -32,6 +32,7 @@ histogram_matrix <- function(df, var_num){
   
   return(salida)
 }
+
 ```
 
 ```{r}
