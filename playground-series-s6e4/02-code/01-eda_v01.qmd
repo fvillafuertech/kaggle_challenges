@@ -39,7 +39,8 @@ histogram_matrix <- function(df, var_num){
 
 ```{r}
 dataset_train <- read_csv(here::here("playground-series-s6e4/01-data", "train.csv")) |>
-  select(-id)
+  select(-id) |>
+  janitor::clean_names()
 head(dataset_train)
 ```
 
@@ -66,7 +67,7 @@ var_num <- df_status_train |>
   filter(type != "character") |>
   pull(variable)
 
-target <- "Irrigation_Need"
+target <- "irrigation_need"
 ```
 
 ### Univariado
@@ -76,8 +77,17 @@ target <- "Irrigation_Need"
 ```{r}
 histogram_matrix(dataset_train, var_num) +
   patchwork::plot_annotation(title = "Matriz de Histogramas")
+
+mlr::summarizeColumns(dataset_train[var_num])
 ```
 
+#### Variables Categóricas
+
+```{r}
+dataset_train[var_cat] |>
+  count(soil_type) |>
+  mutate(prop = n / sum(n))
+```
 
 
 
