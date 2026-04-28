@@ -134,14 +134,31 @@ ggally_hexbin <- function(data, mapping, ...){
     geom_hex(...)
 }
 
-GGally::ggpairs(dataset_train, var_num, lower = list(continuous = ggally_hexbin))
+GGally::ggpairs(dataset_train, var_num, mapping = aes(fill = irrigation_need), lower = list(continuous = ggally_hexbin))
 ```
 
 - Sin correlaciones entre variables numéricas
 
-#### 5.2.2. Correlaciones entre variables y target
+#### 5.2.2. Correlaciones entre variables categóricas y target
 
+```{r}
+lista_plots <- list()
+for(i in 1:length(var_cat)){
+  lista_plots[[i]] <- dataset_train |>
+  count(!!sym(var_cat[i]), irrigation_need) |>
+  group_by(!!sym(var_cat[i])) |>
+  mutate(prop = n / sum(n)) |>
+  ggplot(aes(!!sym(var_cat[i]), prop, fill = irrigation_need)) +
+  geom_col(width = 0.5)
+}
 
+patchwork::wrap_plots(lista_plots, guides = "collect")
+
+```
+
+```{r}
+
+```
 
 
 
