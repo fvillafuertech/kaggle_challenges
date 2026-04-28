@@ -145,12 +145,27 @@ GGally::ggpairs(dataset_train, var_num, mapping = aes(fill = irrigation_need), l
 lista_plots <- list()
 for(i in 1:length(var_cat)){
   lista_plots[[i]] <- dataset_train |>
-  count(!!sym(var_cat[i]), irrigation_need) |>
-  group_by(!!sym(var_cat[i])) |>
-  mutate(prop = n / sum(n)) |>
-  ggplot(aes(!!sym(var_cat[i]), prop, fill = irrigation_need)) +
-  geom_col(width = 0.5)
+    count(!!sym(var_cat[i]), irrigation_need) |>
+    group_by(!!sym(var_cat[i])) |>
+    mutate(
+      prop = n / sum(n),
+      !!sym(var_cat[i]) := fct_reorder(!!sym(var_cat[i]), prop)
+    ) |>
+    ggplot(aes(!!sym(var_cat[i]), prop, fill = irrigation_need)) +
+    geom_col(width = 0.7) +
+    geom_label(aes(label = scales::percent(prop, accuracy = 0.1), 
+                   group = irrigation_need), 
+               position = position_stack(0.5), 
+               fill = "white",
+               size = 2.5) +
+    labs(title = var_cat[i]) +
+    theme(axis.title = element_blank(),
+          axis.text.y = element_blank(),
+          panel.grid = element_blank(),
+          panel.border = element_blank())
 }
+
+# lista_plots[[1]]
 
 patchwork::wrap_plots(lista_plots, guides = "collect")
 
