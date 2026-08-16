@@ -1,0 +1,292 @@
+---
+title: "Reto Kaggle: Adicción al Smartphone"
+format: html
+---
+
+## 1. Librerías
+
+```{r}
+library(tidyverse)
+
+theme_set(theme_light() +
+            theme(plot.title = element_text(hjust = 0.5),
+                  plot.subtitle = element_text(hjust = 0.5),
+                  legend.position = "bottom"))
+```
+
+## Funciones
+
+```{r}
+## Para plotear todos los histogramas de las variables numéricas especificadas
+matriz_histogramas <- function(df, variables_numericas){
+  lista_plots <- list()
+  
+  for(i in 1:length(variables_numericas)){
+    lista_plots[[i]] <- dataset_train |>
+      ggplot(aes(!!sym(variables_numericas[i]))) +
+      geom_histogram(fill = "#02c39a") +
+      labs(title = variables_numericas[i]) +
+      theme(panel.border = element_blank(),
+            panel.grid = element_blank(),
+            axis.ticks = element_blank(),
+            axis.title.x = element_blank())
+  }
+  
+  matriz_final <- patchwork::wrap_plots(lista_plots)
+  
+  return(matriz_final)
+}
+
+## Para obtener cortes de variables numéricas
+corte_quintiles = function(x){
+  cortes <- cut(x, breaks = quantile(x, probs = c(0, 0.2, 0.4, 0.6, 0.8, 1), na.rm = TRUE), # quintiles
+      include.lowest = TRUE, right = TRUE)
+  
+  return(cortes)
+}
+
+## Para hacer plots de tendencia de probabilidad (woe iv)
+
+bin_plot <- function(df, num_vars, probs = seq(0, 1, 0.2), target){
+  lista_plots <- list()
+  
+  for(i in 1:length(num_vars)){
+    lista_plots[[i]] <- df |>
+      select(all_of(c(num_vars[i])), !!sym(target)) |>
+      na.omit() |>
+      mutate(!!sym(num_vars[i]) := cut(!!sym(num_vars[i]), 
+                                    breaks = quantile(!!sym(num_vars[i]), 
+                                                      probs), 
+                                    include.lowest = TRUE,
+                                    right = FALSE)) |>
+      count(!!sym(num_vars[i]), !!sym(target)) |>
+      group_by(!!sym(num_vars[i])) |>
+      mutate(prop = n / sum(n),
+             target_t = recode(!!sym(target), `1` = "Sí", `0` = "No"),
+             bad_prob = ifelse((!!sym(target) * n) / sum(n) == 0, NA, (!!sym(target) * n) / sum(n)),) |>
+      ungroup() |>
+      mutate(total_n = sum(n)) |>
+      group_by(!!sym(num_vars[i])) |>
+      mutate(total_cut = sum(n),
+             prop_cut = sum(n) / total_n) |>
+      ggplot(aes(x = !!sym(num_vars[i]))) +
+      geom_col(aes(y = n, fill = target_t), 
+               position = position_stack(reverse = TRUE),
+               width = 0.6) +
+      geom_line(aes(y = bad_prob * 200000, group = !!sym(target)), 
+                color = "#ce4257") +
+      geom_point(aes(y = bad_prob * 200000, group = !!sym(target)),
+                 color = "#ce4257") +
+      geom_label(aes(y = bad_prob * 200000, label = scales::percent(bad_prob, accuracy = 0.1)),
+                vjust = -0.4, color = "#ce4257", fill = "white") +
+      geom_label(aes(y = bad_prob * 200000, label = scales::percent(bad_prob, accuracy = 0.1)),
+                vjust = -0.4, color = "#ce4257", fill = "white") +
+      geom_label(
+        aes(y = 0,
+            label = glue::glue("{scales::percent(prop_cut, accuracy = 0.1)}\n({scales::comma(total_cut)})")
+        ),
+        vjust = -0.2, 
+        fill = NA, border.color = NA
+      ) +
+      labs(title = "Tendencia de Categoría de Interés (Adicción al Smartphone)",
+           subtitle = glue::glue("Variable utilizada: {num_vars[i]}"),
+           y = "Nro. Casos") +
+      scale_y_continuous(labels = scales::comma_format(), 
+                         sec.axis = sec_axis(~. / 200000, 
+                                             name = "Prob. Adicción", 
+                                             labels = scales::percent_format()), 
+                         expand = expansion(mult = c(0, 0.2))) +
+      scale_fill_manual(name = "Adicción\nal Smartphone", values = c("#979dac", "#33415c")) +
+      theme(panel.grid = element_blank(),
+            legend.title = element_text(hjust = 0.5))
+  }
+  
+  lista_plots_final <- patchwork::wrap_plots(lista_plots) +
+    patchwork::plot_layout(guides = "collect")
+  
+  return(lista_plots_final)
+}
+```
+
+
+## 2. Cargando Datos
+
+```{r}
+dataset_train <- read_csv(here::here("playground-series-s6e8", "01-data/train.csv")) |>
+  select(-id)
+head(dataset_train)
+```
+
+## 3. Meta - análisis
+
+```{r}
+df_status_train <- funModeling::df_status(dataset_train, print_results = FALSE)
+
+print(df_status_train)
+
+df_status_train |>
+  filter(p_na > 0) |>
+  mutate(variable = fct_reorder(glue::glue("{variable} ({scales::comma(q_na, scale = 1)})"), 
+                                p_na)) |>
+  ggplot(aes(p_na, variable)) +
+  geom_col(fill = "#0f4c5c", width = 0.6) +
+  geom_text(aes(label = scales::percent(p_na, scale = 1, accuracy = 0.1)), hjust = -0.2) +
+  labs(title = "Variables con % de Datos Faltantes") + 
+  scale_x_continuous(expand = expansion(mult = c(0, 0.2))) +
+  theme(axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank())
+```
+
+* Todos los regresores contienen valores missing
+* Se hará comparativa de modelamiento con y sin imputación de datos
+
+## 4. Análisis de Datos
+
+- EDA univariado
+- EDA bivariado
+- Modalmiento, baseline (comparativa de diferentes modelos con uso de todas las variables, escoger el mejor)
+- Modelamiento afinación del modelo (selección de variables, tuneo, etc)
+
+```{r}
+## Guardando variables numericas y categóricas
+var_cat <- df_status_train |>
+  filter(type == "character") |>
+  pull(variable)
+
+var_num <- df_status_train |>
+  filter(type == "numeric" & variable != "addicted_label") |>
+  pull(variable)
+
+target <- "addicted_label"
+```
+
+### 4.1. Univariado
+
+#### 4.1.1. Target
+
+```{r}
+dataset_train |>
+  count(addicted_label) |>
+  mutate(prop = n / sum(n))
+```
+
+* Gran mayoría de casos de adicción al smartphone (70.9%)
+
+#### 4.1.2. Categórico
+
+```{r}
+dataset_train |>
+  count(gender, sort = TRUE) |>
+  mutate(prop = n / sum(n))
+```
+
+```{r}
+dataset_train |>
+  count(stress_level, sort = TRUE) |>
+  mutate(prop = n / sum(n))
+```
+
+```{r}
+dataset_train |>
+  count(academic_work_impact, sort = TRUE) |>
+  mutate(prop = n / sum(n))
+```
+
+#### 4.1.3. Numérico
+
+```{r}
+matriz_histogramas(dataset_train, var_num)
+```
+
+```{r}
+mlr::summarizeColumns(dataset_train)
+```
+
+```{r}
+df_prueba_normalidad <- dataset_train |>
+  select(all_of(var_num)) |>
+  map(~nortest::lillie.test(.) |> pluck("p.value")) |>
+  as_tibble() |>
+  pivot_longer(cols = everything(), names_to = "variables", values_to = "p_valor_normalidad_ks_corregido")
+
+df_prueba_normalidad
+```
+
+### 4.2. Bivariado
+
+#### 4.2.1. Correlación entre variales numéricas
+
+Debido a que no se cuenta con normalidad en ninguna de las variables numéricas se procederá a calcular la correlación de Spearman.
+
+```{r}
+cor(na.omit(dataset_train[var_num]), method = "spearman") |>
+  as.data.frame() |>
+  rownames_to_column("v1") |>
+  pivot_longer(cols = -v1,
+               names_to = "v2", 
+               values_to = "cor_spearman") |>
+  ggplot(aes(v1, v2, fill = cor_spearman)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = round(cor_spearman, 2))) +
+  labs(fill = "Cor. Speaman") +
+  scale_fill_gradient2(low = "steelblue", mid = "white", high = "firebrick", limits = c(-1, 1)) +
+  theme(panel.border = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title = element_blank())
+```
+
+* Se aprecian algunas correlaciones entre regresores:
+  - daily_screen_time_hours vs social_media_hours (0.59)
+  - daily_screen_time_hours vs weekend_screen_time (0.81)
+  - daily_screen_time_hours vs work_study_hours (0.51)
+  - daily_screen_time_hours vs gaming_hours (0.4)
+  - social_media_hours vs weekend_screen_time (0.49)
+  - weekend_screen_time vs work_study_hours (0.41)
+  - gaming_hours vs weekend_screen_time
+
+#### 4.2.2. Correlación entre variables numéricas con target
+
+##### 4.2.2. Sin Imputación
+
+```{r}
+bin_plot(dataset_train, num_vars = var_num, target = "addicted_label")
+```
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,12 @@
+---
+title: "Construcción de Modelos"
+format: html
+---
+
+## Librerías
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+```
+
